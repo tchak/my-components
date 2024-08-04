@@ -10,6 +10,7 @@ import isEqual from 'react-fast-compare';
 
 import type { Pattern, Segment, SimpleSegment } from '../../lib/pattern';
 import {
+  SegmentType,
   generateRegExp,
   generateExampleText,
   generatePatternDescription,
@@ -156,13 +157,13 @@ function SegmentItem({
               action.update('type', type as Segment['type'])
             }
           >
-            {['alpha', 'numeric', 'alphanumeric', 'char', 'or'].map((type) => (
+            {Object.values(SegmentType).map((type) => (
               <SelectItem key={type} id={type}>
                 {type}
               </SelectItem>
             ))}
           </Select>
-          {segment.type == 'char' ? (
+          {segment.type == SegmentType.Char ? (
             <TextField
               className="w-40"
               isRequired
@@ -172,7 +173,7 @@ function SegmentItem({
               onChange={(char) => action.update('char', char)}
             />
           ) : null}
-          {segment.type == 'or' ? (
+          {segment.type == SegmentType.Or ? (
             <Button
               variant="icon"
               onPress={() => action.add()}
@@ -182,7 +183,8 @@ function SegmentItem({
               Add Segment
             </Button>
           ) : null}
-          {segment.type != 'char' && segment.type != 'or' ? (
+          {segment.type != SegmentType.Char &&
+          segment.type != SegmentType.Or ? (
             <NumberField
               className="w-40"
               isRequired
@@ -205,7 +207,7 @@ function SegmentItem({
           />
         </Button>
       </fieldset>
-      {segment.type == 'or' ? (
+      {segment.type == SegmentType.Or ? (
         <fieldset className="outline-0 p-1 border border-gray-300 dark:border-zinc-600 rounded-lg -mx-1.5">
           {segment.segments.map((subSegment, subIndex) => (
             <SubSegmentItem
@@ -260,7 +262,7 @@ function SubSegmentItem({
             aria-label="Segment type"
             selectedKey={segment.type}
             onSelectionChange={(type) =>
-              action.update('type', type as Segment['type'])
+              action.update('type', type as SegmentType)
             }
           >
             {['alpha', 'numeric', 'alphanumeric', 'char'].map((type) => (
@@ -269,7 +271,7 @@ function SubSegmentItem({
               </SelectItem>
             ))}
           </Select>
-          {segment.type == 'char' ? (
+          {segment.type == SegmentType.Char ? (
             <TextField
               className="w-40"
               isRequired
@@ -278,8 +280,7 @@ function SubSegmentItem({
               value={segment.char}
               onChange={(char) => action.update('char', char)}
             />
-          ) : null}
-          {segment.type != 'char' ? (
+          ) : (
             <NumberField
               className="w-40"
               isRequired
@@ -288,7 +289,7 @@ function SubSegmentItem({
               value={segment.size}
               onChange={(size) => action.update('size', size)}
             />
-          ) : null}
+          )}
         </div>
         <Button
           variant="icon"
@@ -360,7 +361,7 @@ function usePattern(props: PatternProps) {
       update: (attribute, value) => {
         switch (attribute) {
           case 'type':
-            setPattern(updateSegmentType(index, value as Segment['type']));
+            setPattern(updateSegmentType(index, value as SegmentType));
             break;
           case 'size':
             setPattern(updateSegmentSize(index, Number(value)));
@@ -381,7 +382,7 @@ function usePattern(props: PatternProps) {
           switch (attribute) {
             case 'type':
               setPattern(
-                updateSegmentType(index, value as Segment['type'], subIndex),
+                updateSegmentType(index, value as SegmentType, subIndex),
               );
               break;
             case 'size':
@@ -407,7 +408,7 @@ function usePattern(props: PatternProps) {
 }
 
 interface UpdatePattern {
-  (attribute: 'type', value: Segment['type']): void;
+  (attribute: 'type', value: SegmentType): void;
   (attribute: 'size', value: number): void;
   (attribute: 'char', value: string): void;
 }
@@ -420,15 +421,18 @@ function addSegment(index?: number): (pattern: Pattern) => Pattern {
     segments:
       index != null
         ? pattern.segments.map((segment, i) => {
-            if (i == index && segment.type == 'or') {
+            if (i == index && segment.type == SegmentType.Or) {
               return {
                 ...segment,
-                segments: [...segment.segments, { type: 'alpha', size: 3 }],
+                segments: [
+                  ...segment.segments,
+                  { type: SegmentType.Alpha, size: 3 },
+                ],
               };
             }
             return segment;
           })
-        : [...pattern.segments, { type: 'alpha', size: 3 }],
+        : [...pattern.segments, { type: SegmentType.Alpha, size: 3 }],
   });
 }
 
@@ -447,23 +451,27 @@ function addSegment(index?: number): (pattern: Pattern) => Pattern {
 
 function updateSegmentType(
   index: number,
-  type: Segment['type'],
+  type: SegmentType,
   subIndex?: number,
 ): (pattern: Pattern) => Pattern {
   return (pattern) => ({
     ...pattern,
     segments: pattern.segments.map((segment, i) => {
       if (subIndex != null) {
-        if (i == index && segment.type == 'or') {
+        if (i == index && segment.type == SegmentType.Or) {
           return {
             ...segment,
             segments: segment.segments.map((subSegment, j) => {
-              if (j != subIndex || subSegment.type == type || type == 'or') {
+              if (
+                j != subIndex ||
+                subSegment.type == type ||
+                type == SegmentType.Or
+              ) {
                 return subSegment;
               }
-              if (type == 'char') {
+              if (type == SegmentType.Char) {
                 return { type, char: '' };
-              } else if (subSegment.type != 'char') {
+              } else if (subSegment.type != SegmentType.Char) {
                 return { ...subSegment, type };
               }
               return { type, size: 1 };
@@ -475,14 +483,17 @@ function updateSegmentType(
       if (i != index || segment.type == type) {
         return segment;
       }
-      if (type == 'char') {
+      if (type == SegmentType.Char) {
         return { type, char: '' };
-      } else if (type == 'or') {
-        if (segment.type == 'or') {
+      } else if (type == SegmentType.Or) {
+        if (segment.type == SegmentType.Or) {
           return segment;
         }
         return { type, segments: [segment] };
-      } else if (segment.type != 'char' && segment.type != 'or') {
+      } else if (
+        segment.type != SegmentType.Char &&
+        segment.type != SegmentType.Or
+      ) {
         return { ...segment, type };
       }
       return { type, size: 1 };
@@ -499,19 +510,19 @@ function updateSegmentSize(
     ...pattern,
     segments: pattern.segments.map((segment, i) => {
       if (i == index) {
-        if (segment.type == 'or') {
+        if (segment.type == SegmentType.Or) {
           if (subIndex != null) {
             return {
               ...segment,
               segments: segment.segments.map((subSegment, j) => {
-                if (j == subIndex && subSegment.type != 'char') {
+                if (j == subIndex && subSegment.type != SegmentType.Char) {
                   return { ...subSegment, size };
                 }
                 return subSegment;
               }),
             };
           }
-        } else if (segment.type != 'char') {
+        } else if (segment.type != SegmentType.Char) {
           return { ...segment, size };
         }
       }
@@ -529,19 +540,19 @@ function updateSegmentChar(
     ...pattern,
     segments: pattern.segments.map((segment, i) => {
       if (i == index) {
-        if (segment.type == 'or') {
+        if (segment.type == SegmentType.Or) {
           if (subIndex != null) {
             return {
               ...segment,
               segments: segment.segments.map((subSegment, j) => {
-                if (j == subIndex && subSegment.type == 'char') {
+                if (j == subIndex && subSegment.type == SegmentType.Char) {
                   return { ...subSegment, char };
                 }
                 return subSegment;
               }),
             };
           }
-        } else if (segment.type == 'char') {
+        } else if (segment.type == SegmentType.Char) {
           return { ...segment, char };
         }
       }
@@ -559,7 +570,7 @@ function removeSegment(
     segments:
       subIndex != null
         ? pattern.segments.map((segment, i) => {
-            if (i == index && segment.type == 'or') {
+            if (i == index && segment.type == SegmentType.Or) {
               return {
                 ...segment,
                 segments: segment.segments.filter((_, j) => j != subIndex),
@@ -579,7 +590,7 @@ function moveSegmentUp(
     const segments = [...pattern.segments];
     if (subIndex != null) {
       const segment = segments.at(index);
-      if (segment?.type == 'or' && subIndex > 0) {
+      if (segment?.type == SegmentType.Or && subIndex > 0) {
         const subSegments = [...segment.segments];
         [subSegments[subIndex - 1], subSegments[subIndex]] = [
           subSegments[subIndex],
@@ -605,7 +616,10 @@ function moveSegmentDown(
     const segments = [...pattern.segments];
     if (subIndex != null) {
       const segment = segments.at(index);
-      if (segment?.type == 'or' && subIndex < segment.segments.length - 1) {
+      if (
+        segment?.type == SegmentType.Or &&
+        subIndex < segment.segments.length - 1
+      ) {
         const subSegments = [...segment.segments];
         if (subIndex < subSegments.length - 1) {
           [subSegments[subIndex], subSegments[subIndex + 1]] = [

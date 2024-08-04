@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from '@storybook/test';
 
+import { SegmentType } from '../../src/lib/pattern';
 import { PatternEditor } from '../../src/components/app/PatternEditor';
 
 const meta = {
@@ -10,21 +11,21 @@ const meta = {
     pattern: {
       segments: [
         {
-          type: 'char',
+          type: SegmentType.Char,
           char: '@',
         },
-        { type: 'alpha', size: 4 },
-        { type: 'numeric', size: 4 },
+        { type: SegmentType.Alpha, size: 4 },
+        { type: SegmentType.Numeric, size: 4 },
         {
-          type: 'or',
+          type: SegmentType.Or,
           segments: [
-            { type: 'numeric', size: 3 },
-            { type: 'numeric', size: 5 },
-            { type: 'char', char: 'test' },
-            { type: 'alpha', size: 2 },
+            { type: SegmentType.Numeric, size: 3 },
+            { type: SegmentType.Numeric, size: 5 },
+            { type: SegmentType.Char, char: 'test' },
+            { type: SegmentType.Alpha, size: 2 },
           ],
         },
-        { type: 'alphanumeric', size: 2 },
+        { type: SegmentType.Alphanumeric, size: 2 },
       ],
       separator: '-',
     },
